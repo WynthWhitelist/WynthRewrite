@@ -5490,7 +5490,7 @@ function mainapi:Load(skipgui, profile)
 	if inputService.TouchEnabled and #self.Keybind == 1 and self.Keybind[1] == 'RightShift' then
 		local button = Instance.new('TextButton')
 		button.Size = UDim2.fromOffset(32, 32)
-		button.Position = UDim2.new(1, -90, 0, 4)
+		button.Position = UDim2.new(1, -56, 0, 4)
 		button.BackgroundColor3 = Color3.new()
 		button.BackgroundTransparency = 0.5
 		button.Text = ''
