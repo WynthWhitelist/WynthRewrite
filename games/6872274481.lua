@@ -11835,7 +11835,6 @@ run(function()
 	})
 end)
 
-
 run(function()
     local ClientCrasher
     local Method
@@ -11844,28 +11843,39 @@ run(function()
         Name = 'Crasher',
         Function = function(call)
             if call then
-				if not getconnections then
-					notif('Vape', 'no getconnections --> no crasher 4 u')
-					return ClientCrasher:Toggle()
-				end
-				
-                for _, v in getconnections(replicatedStorage:WaitForChild("events-@easy-games/game-core:shared/game-core-networking@getEvents.Events"):WaitForChild("abilityUsed").OnClientEvent) do
-                    v:Disconnect()    
+                if not getconnections then
+                    notif('Vape', 'no getconnections --> no crasher 4 u')
+                    return ClientCrasher:Toggle()
                 end
 
-                ClientCrasher:Clean(collectionService:GetInstanceAddedSignal('inventory-entity'):Connect(function(player: Model)
-                    local item = player:WaitForChild('HandInvItem') :: IntValue?
-                    for i,v in getconnections(item.Changed) do
-                        v:Disable()
-                    end                
+                local abilitySignal = replicatedStorage:FindFirstChild("events-@easy-games/game-core:shared/game-core-networking@getEvents.Events")
+                if abilitySignal then
+                    local abilityUsed = abilitySignal:FindFirstChild("abilityUsed")
+                    if abilityUsed and abilityUsed.OnClientEvent then
+                        for _, v in ipairs(getconnections(abilityUsed.OnClientEvent)) do
+                            if v and v.Disconnect then
+                                pcall(function() v:Disconnect() end)
+                            end
+                        end
+                    end
+                end
+
+                ClientCrasher:Clean(collectionService:GetInstanceAddedSignal('inventory-entity'):Connect(function(player)
+                    local item = player:FindFirstChild('HandInvItem')
+                    if item and item.Changed then
+                        for _, v in ipairs(getconnections(item.Changed)) do
+                            if v and v.Disable then
+                                pcall(function() v:Disable() end)
+                            end
+                        end
+                    end
                 end))
 
                 repeat
                     if entitylib.isAlive then
                         if Method.Value == 'Ability' then
                             for _ = 1, 1525 do
-								bedwars.AbilityController:useAbility('oasis_swap_staff')
-                                --replicatedStorage['events-@easy-games/game-core:shared/game-core-networking@getEvents.Events'].useAbility:FireServer('oasis_swap_staff')
+                                bedwars.AbilityController:useAbility('oasis_swap_staff')
                             end
                             task.wait(0.1)
                         elseif Method.Value == 'Item' then
