@@ -3803,289 +3803,7 @@ run(function()
 		["List"] = list
 	})
 end)
-																			
-run(function()
-    local inputService = game:GetService("UserInputService")
-    local runService = game:GetService("RunService")
-    local lplr = game.Players.LocalPlayer
-    local vector = Vector3
-
-    local Velocity
-
-    InfiniteJump = vape.Categories.Blatant:CreateModule({
-        Name = 'InfiniteJump',
-        Function = function(callback)
-            if callback then
-                InfiniteJump:Clean(inputService.InputBegan:Connect(function(input, gameProcessed)
-                    if gameProcessed then return end
-                    if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.Space then
-                        while inputService:IsKeyDown(Enum.KeyCode.Space) do
-                            local PrimaryPart = lplr.Character and lplr.Character.PrimaryPart
-                            if entitylib.isAlive and PrimaryPart then
-                                PrimaryPart.Velocity = vector.new(PrimaryPart.Velocity.X, Velocity.Value, PrimaryPart.Velocity.Z)
-                            end
-                            task.wait()
-                        end
-                    end
-                end))
-
-                if inputService.TouchEnabled then
-                    local Jumping = false
-                    local JumpButton = lplr.PlayerGui:WaitForChild("TouchGui"):WaitForChild("TouchControlFrame"):WaitForChild("JumpButton")
-
-                    InfiniteJump:Clean(JumpButton.MouseButton1Down:Connect(function()
-                        Jumping = true
-                    end))
-
-                    InfiniteJump:Clean(JumpButton.MouseButton1Up:Connect(function()
-                        Jumping = false
-                    end))
-
-                    InfiniteJump:Clean(runService.RenderStepped:Connect(function()
-                        if Jumping and entitylib.isAlive then
-                            local PrimaryPart = lplr.Character and lplr.Character.PrimaryPart
-                            if PrimaryPart then
-                                PrimaryPart.Velocity = vector.new(PrimaryPart.Velocity.X, Velocity.Value, PrimaryPart.Velocity.Z)
-                            end
-                        end
-                    end))
-                end
-            end
-        end,
-        Tooltip = "Allows infinite jumping"
-    })
-
-    Velocity = InfiniteJump:CreateSlider({
-        Name = 'Velocity',
-        Min = 50,
-        Max = 300,
-        Default = 50
-    })
-end)
-
-run(function()
-	local ExploitDetectionSystem = {
-		Enabled = false,
-		Connections = {},
-		PlayerData = {}
-	}
-
-	local CORE_CONNECTIONS = {}
-	local function clean(con)
-		table.insert(CORE_CONNECTIONS, con)
-	end
-
-	local ExploitDetectionSystemConfig = {
-		DetectionThresholds = {
-			TeleportDistance = 400,
-			SpeedDistance = 25,
-			FlyDistance = 10000,
-			CheckInterval = 2.5
-		},
-		DetectedPlayers = {
-			Teleport = {},
-			Speed = {},
-			InfiniteFly = {},
-			Invisibility = {},
-			NameSuspicious = {},
-			Cached = {}
-		},
-		CacheEnabled = true,
-		TeleportDetection = true,
-		InfiniteFlyDetection = true,
-		InvisibilityDetection = true,
-		NukerDetection = true,
-		SpeedDetection = true,
-		NameDetection = true
-	}
-
-	local DetectionCore = {
-		updateCache = function(player, detectionType)
-			if not ExploitDetectionSystemConfig.CacheEnabled then return end
-			local success, cache = pcall(function()
-				local file = readfile('vape/Libraries/exploiters.json')
-				return file and httpService:JSONDecode(file) or {}
-			end)
-			cache = cache or {}
-			cache[player.Name] = cache[player.Name] or {
-				DisplayName = player.DisplayName,
-				UserId = tostring(player.UserId),
-				Detections = {}
-			}
-			if not table.find(cache[player.Name].Detections, detectionType) then
-				table.insert(cache[player.Name].Detections, detectionType)
-				pcall(function()
-					writefile('vape/Libraries/exploiters.json', httpService:JSONEncode(cache))
-				end)
-			end
-		end,
-		isValidTarget = function(player)
-			return player ~= lplr and not player:GetAttribute('Spectator') and store.queueType:find('bedwars') ~= nil
-		end,
-		notify = function(title, message, duration)
-			InfoNotification('HackerDetector', message, duration)
-			whitelist.customtags[title] = {{text = 'VAPE USER', color = Color3.fromRGB(255, 255, 0)}}
-		end
-	}
-
-	local DetectionMethods = {
-		Teleport = function(player)
-			local lastTeleport = player:GetAttribute('LastTeleported') or 0
-			local lastPosition = Vector3.zero
-			table.insert(ExploitDetectionSystem.Connections, player:GetAttributeChangedSignal('LastTeleported'):Connect(function()
-				lastTeleport = player:GetAttribute('LastTeleported')
-			end))
-			table.insert(ExploitDetectionSystem.Connections, player.CharacterAdded:Connect(function()
-				task.spawn(function()
-					repeat task.wait() until player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-					lastPosition = player.Character.HumanoidRootPart.Position
-					task.delay(ExploitDetectionSystemConfig.DetectionThresholds.CheckInterval, function()
-						if ExploitDetectionSystem.Enabled and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-							local distance = (player.Character.HumanoidRootPart.Position - lastPosition).Magnitude
-							if distance >= ExploitDetectionSystemConfig.DetectionThresholds.TeleportDistance and
-								(player:GetAttribute('LastTeleported') - lastTeleport) == 0 then
-								DetectionCore.notify(player.Name, player.DisplayName .. ' detected using Teleport!', 100)
-								table.insert(ExploitDetectionSystemConfig.DetectedPlayers.Teleport, player)
-								DetectionCore.updateCache(player, 'Teleport')
-							end
-						end
-					end)
-				end)
-			end))
-		end,
-
-		Speed = function(player)
-			local lastPosition = Vector3.zero
-			task.spawn(function()
-				while ExploitDetectionSystem.Enabled do
-					if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-						local distance = (player.Character.HumanoidRootPart.Position - lastPosition).Magnitude
-						if distance > ExploitDetectionSystemConfig.DetectionThresholds.SpeedDistance then
-							DetectionCore.notify(player.Name, player.DisplayName .. ' detected using Speed!', 60)
-							table.insert(ExploitDetectionSystemConfig.DetectedPlayers.Speed, player)
-							DetectionCore.updateCache(player, 'Speed')
-						end
-						lastPosition = player.Character.HumanoidRootPart.Position
-					end
-					task.wait(ExploitDetectionSystemConfig.DetectionThresholds.CheckInterval)
-				end
-			end)
-		end,
-
-		-- Add other detection methods (InfiniteFly, Invisibility, NameCheck, CacheCheck) similarly if needed
-	}
-
-	local function initializeDetections(player)
-		if ExploitDetectionSystemConfig.TeleportDetection then task.spawn(DetectionMethods.Teleport, player) end
-		if ExploitDetectionSystemConfig.SpeedDetection then task.spawn(DetectionMethods.Speed, player) end
-	end
-
-	vape.Categories.Utility:CreateModule({
-		Name = "HackerDetector",
-		Tooltip = "Detects cheaters using multiple methods",
-		Function = function(callback)
-			ExploitDetectionSystem.Enabled = callback
-			if callback then
-				for _, player in pairs(playersService:GetPlayers()) do
-					if player ~= lplr then
-						initializeDetections(player)
-					end
-				end
-				clean(playersService.PlayerAdded:Connect(function(plr)
-					if plr ~= lplr then
-						initializeDetections(plr)
-					end
-				end))
-			else
-				for _, conn in pairs(ExploitDetectionSystem.Connections) do
-					conn:Disconnect()
-				end
-				table.clear(ExploitDetectionSystem.Connections)
-				for _, conn in pairs(CORE_CONNECTIONS) do
-					conn:Disconnect()
-				end
-				table.clear(CORE_CONNECTIONS)
-			end
-		end,
-		Default = false
-	})
-end)
-																	
-run(function()
-    ToyAnimation = vape.Categories.Blatant:CreateModule({
-        Name = 'ToyAnimation',
-        Function = function(callback)
-            local packName = "Toy"
-            local player = game.Players.LocalPlayer
-            local character = player.Character or player.CharacterAdded:Wait()
-
-            if callback then
-                -- Save Animate script for restoration
-                if character:FindFirstChild("Animate") then
-                    ToyAnimation.DefaultAnimate = character.Animate:Clone()
-                end
-
-                -- Set pack and run script
-                getgenv().pack = packName
-                loadstring(game:HttpGet("https://raw.githubusercontent.com/Mautiku/Mautiku/refs/heads/main/AnimationCHANGER.txt", true))()
-            else
-                -- Restore Animate script if previously saved
-                if ToyAnimation.DefaultAnimate then
-                    local old = character:FindFirstChild("Animate")
-                    if old then old:Destroy() end
-
-                    local restore = ToyAnimation.DefaultAnimate:Clone()
-                    restore.Parent = character
-                    restore.Disabled = false
-                end
-            end
-        end,
-        Tooltip = "Toggles Toy animation pack"
-    })
-end)
-																	
-run(function()
-    MageAnimation = vape.Categories.Blatant:CreateModule({
-        Name = 'MageAnimation',
-        Function = function(callback)
-            local packName = "Mage"
-            local defaultAnimateScript
-
-            if callback then
-                -- Save current Animate script for restoration
-                local player = game.Players.LocalPlayer
-                local character = player.Character or player.CharacterAdded:Wait()
-                local animate = character:FindFirstChild("Animate")
-
-                if animate then
-                    defaultAnimateScript = animate:Clone()
-                end
-
-                -- Set animation pack (make sure case is correct)
-                getgenv().pack = packName
-
-                -- Load animation changer script
-                loadstring(game:HttpGet("https://raw.githubusercontent.com/Mautiku/Mautiku/refs/heads/main/AnimationCHANGER.txt", true))()
-            else
-                -- Restore default animation
-                local player = game.Players.LocalPlayer
-                local character = player.Character
-
-                if character and defaultAnimateScript then
-                    local existingAnimate = character:FindFirstChild("Animate")
-                    if existingAnimate then
-                        existingAnimate:Destroy()
-                    end
-
-                    defaultAnimateScript.Parent = character
-                    defaultAnimateScript.Disabled = false
-                end
-            end
-        end,
-        Tooltip = "Mage Animation Toggle"
-    })
-end)
-																					
+																																																															
 run(function()
     PartyPopperExploit = vape.Categories.Utility:CreateModule({
         Name = 'PartyPopperExploit',
@@ -4335,137 +4053,7 @@ run(function()
         Default = "Shield"
     })
 end)
-																								
-run(function()
-    local disguiseConnection
-    local uiConnections = {}
-    local characterConnection
-    local originalTexts = {}
-    local originalAppearanceId, originalDisplayName
-
-    StreamerMode = vape.Categories.Utility:CreateModule({
-        Name = 'StreamerMode',
-        Function = function(callback)
-            local lp = game:GetService("Players").LocalPlayer
-            local players = game:GetService('Players')
-
-            if callback then
-                if not getgenv().Config then
-                    getgenv().Config = {
-                        Headless = false,
-                        FakeDisplayName = "Chase",
-                        FakeName = "Chasemaser",
-                        FakeId = 22808138,
-                    }
-                end
-
-                local Config = getgenv().Config
-                local oldUserId = tostring(lp.UserId)
-                local oldName = lp.Name
-                originalDisplayName = lp.DisplayName
-                originalAppearanceId = lp.CharacterAppearanceId
-
-                local function processtext(text)
-                    if typeof(text) ~= "string" then return text end
-                    text = text:gsub(oldName, Config.FakeName)
-                    text = text:gsub(oldUserId, tostring(Config.FakeId))
-                    text = text:gsub(originalDisplayName, Config.FakeDisplayName)
-                    return text
-                end
-
-                -- Disguise UI
-                for _, v in ipairs(game:GetDescendants()) do
-                    if v:IsA("TextBox") or v:IsA("TextLabel") or v:IsA("TextButton") then
-                        originalTexts[v] = {Text = v.Text, Name = v.Name}
-                        v.Text = processtext(v.Text)
-                        v.Name = processtext(v.Name)
-                        table.insert(uiConnections, v.Changed:Connect(function()
-                            v.Text = processtext(v.Text)
-                            v.Name = processtext(v.Name)
-                        end))
-                    end
-                end
-
-                disguiseConnection = game.DescendantAdded:Connect(function(descendant)
-                    if descendant:IsA("TextBox") or descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
-                        descendant.Text = processtext(descendant.Text)
-                        descendant.Name = processtext(descendant.Name)
-                        table.insert(uiConnections, descendant.Changed:Connect(function()
-                            descendant.Text = processtext(descendant.Text)
-                            descendant.Name = processtext(descendant.Name)
-                        end))
-                    end
-                end)
-
-                -- Apply fake info
-                lp.DisplayName = Config.FakeDisplayName
-                lp.CharacterAppearanceId = Config.FakeId
-
-                -- Headless effect
-                if Config.Headless then
-                    task.spawn(function()
-                        while StreamerMode.Enabled and task.wait(0.5) do
-                            local char = lp.Character
-                            if char and char:FindFirstChild("Head") then
-                                char.Head.Transparency = 1
-                                local decal = char.Head:FindFirstChildOfClass("Decal")
-                                if decal then decal:Destroy() end
-                            end
-                        end
-                    end)
-                end
-
-                -- Disguise character
-                local function disguisechar(char, id)
-                    task.spawn(function()
-                        local hum = char:FindFirstChildOfClass("Humanoid")
-                        if not hum then return end
-
-                        local desc
-                        repeat
-                            pcall(function()
-                                desc = players:GetHumanoidDescriptionFromUserId(id)
-                            end)
-                            task.wait()
-                        until desc
-
-                        desc.HeightScale = hum:WaitForChild("HumanoidDescription").HeightScale
-                        char.Humanoid:ApplyDescriptionClientServer(desc)
-                    end)
-                end
-
-                disguisechar(lp.Character, Config.FakeId)
-                characterConnection = lp.CharacterAdded:Connect(function(char)
-                    disguisechar(char, Config.FakeId)
-                end)
-            else
-                -- Cleanup: revert everything
-                if characterConnection then characterConnection:Disconnect() end
-                if disguiseConnection then disguiseConnection:Disconnect() end
-                for _, conn in pairs(uiConnections) do
-                    conn:Disconnect()
-                end
-
-                -- Restore original UI text
-                for obj, data in pairs(originalTexts) do
-                    if obj and obj.Parent then
-                        obj.Text = data.Text
-                        obj.Name = data.Name
-                    end
-                end
-
-                -- Restore original player info
-                if lp then
-                    lp.DisplayName = originalDisplayName or lp.Name
-                    lp.CharacterAppearanceId = originalAppearanceId or lp.UserId
-                end
-            end
-        end,
-        Default = false,
-        Tooltip = "Client Sided"
-    })
-end)
-																					
+																																													
 run(function()
     local playersService = game:GetService("Players")
     local replicatedStorage = game:GetService("ReplicatedStorage")
@@ -4607,7 +4195,7 @@ run(function()
 
                 activateNightmareEmote()
             else
-                -- When toggled off
+                -- 
                 if emoteActive then
                     stopEffects()
                 end
@@ -4648,7 +4236,7 @@ run(function()
             if enabled then
                 player:SetAttribute("CustomMatchRole", "host")
             else
-                player:SetAttribute("CustomMatchRole", nil) -- remove the role
+                player:SetAttribute("CustomMatchRole", nil) 
             end
         end,
         Default = false,
@@ -4704,7 +4292,7 @@ run(function()
         loopConn = RunService.Heartbeat:Connect(function()
             if not invisibilityEnabled or not Character or not Humanoid or not RootPart then return end
 
-            -- Force character invisible every frame
+            -- 
             for _, part in ipairs(Character:GetDescendants()) do
                 if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
                     part.LocalTransparencyModifier = 1
@@ -4715,7 +4303,7 @@ run(function()
                 end
             end
 
-            -- Position/animation spoof
+            -- 
             local oldcf = RootPart.CFrame
             local oldcamoffset = Humanoid.CameraOffset
             local newcf = RootPart.CFrame - Vector3.new(0, Humanoid.HipHeight + (RootPart.Size.Y / 2) - 1, 0)
@@ -4885,51 +4473,7 @@ run(function()
     })
 end)
 
-run(function()
-    local Players = game:GetService("Players")
-    local ageCheckConn
-
-    local function checkAccountAges()
-        for _, player in ipairs(Players:GetPlayers()) do
-            local age = player.AccountAge
-            if age < 20 then
-                vape:CreateNotification("Cheater Detected", player.Name .. " might be Cheating (Account Age: " .. tostring(age) .. ")", 5)
-            end
-        end
-    end
-
-    local function startChecking()
-        checkAccountAges()
-        ageCheckConn = Players.PlayerAdded:Connect(function(player)
-            player:GetPropertyChangedSignal("AccountAge"):Wait()
-            local age = player.AccountAge
-            if age < 20 then
-                vape:CreateNotification("Cheater Detected", player.Name .. " might be Cheating (Account Age: " .. tostring(age) .. ")", 5)
-            end
-        end)
-    end
-
-    local function stopChecking()
-        if ageCheckConn then
-            ageCheckConn:Disconnect()
-            ageCheckConn = nil
-        end
-    end
-
-    vape.Categories.Utility:CreateModule({
-        Name = "CheaterDetector",
-        Function = function(callback)
-            if callback then
-                startChecking()
-            else
-                stopChecking()
-            end
-        end,
-        Default = false,
-        Tooltip = "ðŸ›¡ï¸"
-    })
-end)
-																																			
+																													
 run(function()
     FPSUnlocker = vape.Categories.Utility:CreateModule({
         Name = 'FPSUnlocker',
@@ -5180,88 +4724,7 @@ run(function()
 			end
 		end
 	})
-end)
-																																																																			
---run(function()
-    --SpeedBoost = vape.Categories.Blatant:CreateModule({
-       -- Name = 'SpeedBoost',
-      --  Function = function(callback)
-     --       local Players = game:GetService("Players")
-     --       local RunService = game:GetService("RunService")
-      --      local Workspace = game:GetService("Workspace")
-
-       --     local player = Players.LocalPlayer
-       --     local connections = {}
-
-          --  local function applySpeedBoost(char)
-             --   local hrp = char:WaitForChild("HumanoidRootPart", 5)
-            --    local humanoid = char:WaitForChild("Humanoid", 5)
-            --    if not hrp or not humanoid then return end
-
-             --   humanoid.AutoRotate = false
-             --   local useCFrame = true
-              --  local speed = 31
-             --   local normalSpeed = 16
-             --   local running = true
-
-              --  task.spawn(function()
-                 --   while SpeedBoost.Enabled and running do
-                    --    useCFrame = true
-                       -- humanoid.WalkSpeed = 0
-                       -- task.wait(1)
-                      --  useCFrame = false
-                      --  humanoid.WalkSpeed = normalSpeed
-                      --  task.wait(1)
-                    --end
-                --end)
-
-                --table.insert(connections, RunService.RenderStepped:Connect(function(dt)
-                  --  if not useCFrame or not hrp or not char or not char.Parent then return end
-
-                   -- local direction = humanoid.MoveDirection
-                   -- if direction.Magnitude > 0 then
-                      --  local moveDelta = direction.Unit * speed * dt
-                       -- local newPos = hrp.Position + moveDelta
-
-                      --  local rayParams = RaycastParams.new()
-                       -- rayParams.FilterType = Enum.RaycastFilterType.Blacklist
-                      --  rayParams.FilterDescendantsInstances = {char}
-
-                       -- local result = Workspace:Raycast(hrp.Position, moveDelta, rayParams)
-
-                      --  if not result then
-                           -- hrp.CFrame = CFrame.new(newPos, newPos + Vector3.new(direction.X, 0, direction.Z))
-                       -- end
-                   -- end
-                --end))
-          --  end
-
-            --for _, conn in pairs(connections) do conn:Disconnect() end
-           -- table.clear(connections)
-
-          --  if callback then
-            --    if player.Character then
-              --      applySpeedBoost(player.Character)
-            --    end
-            --    table.insert(connections, player.CharacterAdded:Connect(function(char)
-             --       if SpeedBoost.Enabled then
-                 --       task.wait(1)
-               --         applySpeedBoost(char)
-               --     end
-              --  end))
-          --  else
-           --     if player.Character and player.Character:FindFirstChild("Humanoid") then
-             --       player.Character.Humanoid.WalkSpeed = 16
-             --       player.Character.Humanoid.AutoRotate = true
-           --     end
-           --     for _, conn in pairs(connections) do conn:Disconnect() end
-             --   table.clear(connections)
-	   --  end																																																
-    --    end,
-    --    Default = false,
-     --   Tooltip = "Bypass go brrr"
- --   })
---end)
+end)																																																																			
 																																												
 run(function()
     FirstPersonArm = vape.Categories.Utility:CreateModule({
@@ -5433,197 +4896,7 @@ run(function()
 		Default = true
 	})
 end)
-
-run(function()
-    local Players = game:GetService("Players")
-    local LocalPlayer = Players.LocalPlayer
-    local animationId = "rbxassetid://4940563117"
-    local activeTracks = {}
-    local respawnConnection
-
-    SetEmote = vape.Categories.Blatant:CreateModule({
-        Name = 'SetEmote',
-        Function = function(callback)
-            local function applyLoopingAnimation(character)
-                local humanoid = character:WaitForChild("Humanoid")
-                local animation = Instance.new("Animation")
-                animation.AnimationId = animationId
-                local mainAnim = humanoid:LoadAnimation(animation)
-
-                mainAnim.Priority = Enum.AnimationPriority.Action4
-                mainAnim.Looped = true
-                mainAnim:Play()
-                table.insert(activeTracks, mainAnim)
-
-                -- Watchdog to keep animation active
-                task.spawn(function()
-                    while SetEmote.Enabled and character and character.Parent do
-                        for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
-                            if track.Animation.AnimationId ~= animationId then
-                                track:Stop()
-                            elseif not track.Looped then
-                                track.Looped = true
-                            end
-                        end
-                        if not mainAnim.IsPlaying then
-                            mainAnim:Play()
-                        end
-                        task.wait(0.05)
-                    end
-                end)
-            end
-
-            if callback then
-                -- Apply to current character
-                if LocalPlayer.Character then
-                    applyLoopingAnimation(LocalPlayer.Character)
-                end
-
-                -- Reapply on respawn
-                respawnConnection = LocalPlayer.CharacterAdded:Connect(function(char)
-                    applyLoopingAnimation(char)
-                end)
-            else
-                -- Stop all active animation tracks
-                for _, track in ipairs(activeTracks) do
-                    if track and track.IsPlaying then
-                        track:Stop()
-                    end
-                end
-                activeTracks = {}
-
-                -- Disconnect respawn handler
-                if respawnConnection then
-                    respawnConnection:Disconnect()
-                    respawnConnection = nil
-                end
-            end
-        end,
-        Tooltip = 'Looped emote animation'
-    })
-end)
-
-run(function()
-    CframeHighJump = vape.Categories.Blatant:CreateModule({
-        Name = 'CframeHighJump',
-        Function = function(callback)
-            if callback then
-                local player = game.Players.LocalPlayer
-                local character = player.Character or player.CharacterAdded:Wait()
-                local rootPart = character:WaitForChild("HumanoidRootPart")
-
-                local originalGravity = workspace.Gravity
-                workspace.Gravity = 0
-
-                local totalTime = 2
-                local interval = 0.1
-                local stepHeight = 5
-                local steps = totalTime / interval
-
-                task.spawn(function()
-                    for i = 1, steps do
-                        rootPart.CFrame = rootPart.CFrame + Vector3.new(0, stepHeight, 0)
-                        task.wait(interval)
-                    end
-
-                    workspace.Gravity = originalGravity
-                end)
-            end
-        end,
-        Default = false,
-        Tooltip = "High jump but with Cframe method"
-    })
-end)
-																																	
-run(function()
-    local itemSpawnerConnection
-
-    ItemSpawner = vape.Categories.Utility:CreateModule({
-        Name = 'ItemSpawner',
-        Function = function(callback)
-            if itemSpawnerConnection then
-                itemSpawnerConnection:Disconnect()
-                itemSpawnerConnection = nil
-            end
-
-            if callback then
-                local Players = game:GetService("Players")
-                local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-                local player = Players.LocalPlayer
-                local username = player.Name
-
-                local itemsFolder = ReplicatedStorage:WaitForChild("Items")
-                local inventoriesFolder = ReplicatedStorage:WaitForChild("Inventories")
-
-                -- Print all items in the Items folder
-                for _, item in ipairs(itemsFolder:GetChildren()) do
-                    print("Found item:", item.Name)
-                end
-
-                itemSpawnerConnection = player.Chatted:Connect(function(message)
-                    local prefix = "/i "
-                    if message:sub(1, #prefix):lower() == prefix then
-                        local inputName = message:sub(#prefix + 1):lower()
-                        local matchedItem = nil
-
-                        -- Case-insensitive match
-                        for _, item in ipairs(itemsFolder:GetChildren()) do
-                            if item.Name:lower() == inputName then
-                                matchedItem = item
-                                break
-                            end
-                        end
-
-                        if matchedItem then
-                            local inventoryFolder = inventoriesFolder:FindFirstChild(username)
-                            if inventoryFolder then
-                                local clone = matchedItem:Clone()
-                                clone.Parent = inventoryFolder
-                                print("Cloned:", matchedItem.Name, "to", username .. "'s inventory")
-                            else
-                                warn("Inventory folder for", username, "not found")
-                            end
-                        else
-                            warn("Item", inputName, "not found in Items")
-                        end
-                    end
-                end)
-            end
-        end,
-        Default = false,
-        Tooltip = "Client Sided"
-    })
-end)
-
-run(function()
-    local conn
-
-    PixelSword = vape.Categories.Utility:CreateModule({
-        Name = "PixelSword",
-        Function = function(callback)
-            if callback then
-                conn = workspace.CurrentCamera.Viewmodel.ChildAdded:Connect(function(x)
-                    if x and x:FindFirstChild("Handle") then
-                        if string.find(x.Name:lower(), 'sword') then
-                            x.Handle.Material = Enum.Material.ForceField
-                            x.Handle.MeshId = "rbxassetid://13471207377"
-                            x.Handle.BrickColor = BrickColor.new("Hot pink")
-                        end
-                    end
-                end)
-            else
-                if conn then
-                    conn:Disconnect()
-                    conn = nil
-                end
-            end
-        end,
-        Default = false,
-        Tooltip = ""
-    })
-end)
-																																		
+																																																																																																										
 run(function()
 	local Mode
 	local Expand
@@ -12612,3 +11885,90 @@ run(function()
         List = {'Item', 'Ability'}
     })
 end)
+
+run(function()
+    local inputService = game:GetService("UserInputService")
+    local runService = game:GetService("RunService")
+    local lplr = game.Players.LocalPlayer
+    local vector = Vector3
+
+    local Velocity
+
+    InfiniteJump = vape.Categories.Blatant:CreateModule({
+        Name = 'InfiniteJump',
+        Function = function(callback)
+            if callback then
+                InfiniteJump:Clean(inputService.InputBegan:Connect(function(input, gameProcessed)
+                    if gameProcessed then return end
+                    if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.Space then
+                        while inputService:IsKeyDown(Enum.KeyCode.Space) do
+                            local PrimaryPart = lplr.Character and lplr.Character.PrimaryPart
+                            if entitylib.isAlive and PrimaryPart then
+                                PrimaryPart.Velocity = vector.new(PrimaryPart.Velocity.X, Velocity.Value, PrimaryPart.Velocity.Z)
+                            end
+                            task.wait()
+                        end
+                    end
+                end))
+
+                if inputService.TouchEnabled then
+                    local Jumping = false
+                    local JumpButton = lplr.PlayerGui:WaitForChild("TouchGui"):WaitForChild("TouchControlFrame"):WaitForChild("JumpButton")
+
+                    InfiniteJump:Clean(JumpButton.MouseButton1Down:Connect(function()
+                        Jumping = true
+                    end))
+
+                    InfiniteJump:Clean(JumpButton.MouseButton1Up:Connect(function()
+                        Jumping = false
+                    end))
+
+                    InfiniteJump:Clean(runService.RenderStepped:Connect(function()
+                        if Jumping and entitylib.isAlive then
+                            local PrimaryPart = lplr.Character and lplr.Character.PrimaryPart
+                            if PrimaryPart then
+                                PrimaryPart.Velocity = vector.new(PrimaryPart.Velocity.X, Velocity.Value, PrimaryPart.Velocity.Z)
+                            end
+                        end
+                    end))
+                end
+            end
+        end,
+        Tooltip = "Allows infinite jumping"
+    })
+
+    Velocity = InfiniteJump:CreateSlider({
+        Name = 'Velocity',
+        Min = 50,
+        Max = 300,
+        Default = 50
+    })
+end)	
+
+run(function()
+    local conn
+
+    PixelSword = vape.Categories.Utility:CreateModule({
+        Name = "PixelSword",
+        Function = function(callback)
+            if callback then
+                conn = workspace.CurrentCamera.Viewmodel.ChildAdded:Connect(function(x)
+                    if x and x:FindFirstChild("Handle") then
+                        if string.find(x.Name:lower(), 'sword') then
+                            x.Handle.Material = Enum.Material.ForceField
+                            x.Handle.MeshId = "rbxassetid://13471207377"
+                            x.Handle.BrickColor = BrickColor.new("Hot pink")
+                        end
+                    end
+                end)
+            else
+                if conn then
+                    conn:Disconnect()
+                    conn = nil
+                end
+            end
+        end,
+        Default = false,
+        Tooltip = ""
+    })
+end)																																																																							
