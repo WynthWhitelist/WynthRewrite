@@ -11839,6 +11839,20 @@ run(function()
     local ClientCrasher
     local Method
 
+    local function safeDisconnect(connections)
+        for _, v in ipairs(connections) do
+            if v and (v.Disconnect or v.Disable) then
+                pcall(function()
+                    if v.Disconnect then
+                        v:Disconnect()
+                    elseif v.Disable then
+                        v:Disable()
+                    end
+                end)
+            end
+        end
+    end
+
     ClientCrasher = vape.Categories.Minigames:CreateModule({
         Name = 'Crasher',
         Function = function(call)
@@ -11852,38 +11866,40 @@ run(function()
                 if abilitySignal then
                     local abilityUsed = abilitySignal:FindFirstChild("abilityUsed")
                     if abilityUsed and abilityUsed.OnClientEvent then
-                        for _, v in ipairs(getconnections(abilityUsed.OnClientEvent)) do
-                            if v and v.Disconnect then
-                                pcall(function() v:Disconnect() end)
-                            end
-                        end
+                        safeDisconnect(getconnections(abilityUsed.OnClientEvent))
                     end
                 end
 
                 ClientCrasher:Clean(collectionService:GetInstanceAddedSignal('inventory-entity'):Connect(function(player)
                     local item = player:FindFirstChild('HandInvItem')
                     if item and item.Changed then
-                        for _, v in ipairs(getconnections(item.Changed)) do
-                            if v and v.Disable then
-                                pcall(function() v:Disable() end)
-                            end
-                        end
+                        safeDisconnect(getconnections(item.Changed))
                     end
                 end))
 
                 repeat
-                    if entitylib.isAlive then
-                        if Method.Value == 'Ability' then
-                            for _ = 1, 1525 do
-                                bedwars.AbilityController:useAbility('oasis_swap_staff')
-                            end
-                            task.wait(0.1)
-                        elseif Method.Value == 'Item' then
-                            for _, tool in store.inventory.inventory.items do
-                                task.spawn(switchItem, tool.tool, 0, true)
+                    local ok, err = pcall(function()
+                        if entitylib.isAlive then
+                            if Method.Value == 'Ability' then
+                                for _ = 1, 1525 do
+                                    bedwars.AbilityController:useAbility('oasis_swap_staff')
+                                end
+                                task.wait(0.1)
+                            elseif Method.Value == 'Item' then
+                                for _, tool in store.inventory.inventory.items do
+                                    task.spawn(switchItem, tool.tool, 0, true)
+                                end
                             end
                         end
+                    end)
+
+                    if not ok then
+                        warn("[Crasher Error]:", err)
+                        notif('Crasher', 'Error')
+                        ClientCrasher:Toggle(false)
+                        break
                     end
+
                     task.wait()
                 until not ClientCrasher.Enabled
             end
