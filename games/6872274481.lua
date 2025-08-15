@@ -12447,7 +12447,7 @@ run(function()
     local Method
 
     ClientCrasher = vape.Categories.Minigames:CreateModule({
-        Name = 'Client Crasher',
+        Name = 'Crasher',
         Function = function(call)
             if call then
                 for _, v in getconnections(game:GetService("ReplicatedStorage"):WaitForChild("events-@easy-games/game-core:shared/game-core-networking@getEvents.Events"):WaitForChild("abilityUsed").OnClientEvent) do
@@ -12464,10 +12464,10 @@ run(function()
                 repeat
                     if entitylib.isAlive then
                         if Method.Value == 'Ability' then
-                            for _ = 1, 25 do
+                            for _ = 1, 1525 do
                                 replicatedStorage['events-@easy-games/game-core:shared/game-core-networking@getEvents.Events'].useAbility:FireServer('oasis_swap_staff')
                             end
-                            task.wait(0.1)
+                            task.wait(0.01)
                         elseif Method.Value == 'Item' then
                             for _, tool in store.inventory.inventory.items do
                                 task.spawn(switchItem, tool.tool, 0, true)
@@ -12475,6 +12475,7 @@ run(function()
                         end
                     end
                     task.wait()
+
                 until not ClientCrasher.Enabled
             end
         end
@@ -12484,4 +12485,4 @@ run(function()
         Name = 'Method',
         List = {'Item', 'Ability'}
     })
-end)																																																															
+end)
