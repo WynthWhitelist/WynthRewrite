@@ -11854,17 +11854,12 @@ run(function()
     end
 
     ClientCrasher = vape.Categories.Minigames:CreateModule({
-        Name = 'Crasher',
+        Name = 'Client Crasher',
         Function = function(call)
             if call then
-                if not getconnections then
-                    notif('Vape', 'no getconnections --> no crasher 4 u')
-                    return ClientCrasher:Toggle()
-                end
-
-                local abilitySignal = replicatedStorage:FindFirstChild("events-@easy-games/game-core:shared/game-core-networking@getEvents.Events")
-                if abilitySignal then
-                    local abilityUsed = abilitySignal:FindFirstChild("abilityUsed")
+                local eventsFolder = game:GetService("ReplicatedStorage"):FindFirstChild("events-@easy-games/game-core:shared/game-core-networking@getEvents.Events")
+                if eventsFolder then
+                    local abilityUsed = eventsFolder:FindFirstChild("abilityUsed")
                     if abilityUsed and abilityUsed.OnClientEvent then
                         safeDisconnect(getconnections(abilityUsed.OnClientEvent))
                     end
@@ -11878,28 +11873,24 @@ run(function()
                 end))
 
                 repeat
-                    local ok, err = pcall(function()
-                        if entitylib.isAlive then
-                            if Method.Value == 'Ability' then
-                                for _ = 1, 1525 do
-                                    bedwars.AbilityController:useAbility('oasis_swap_staff')
-                                end
-                                task.wait(0.1)
-                            elseif Method.Value == 'Item' then
-                                for _, tool in store.inventory.inventory.items do
-                                    task.spawn(switchItem, tool.tool, 0, true)
-                                end
+                    if entitylib.isAlive then
+                        if Method.Value == 'Ability' then
+                            for _ = 1, 25 do
+                                pcall(function()
+                                    replicatedStorage['events-@easy-games/game-core:shared/game-core-networking@getEvents.Events'].useAbility:FireServer('oasis_swap_staff')
+                                end)
+                            end
+                            task.wait(0.1)
+                        elseif Method.Value == 'Item' then
+                            for _, tool in store.inventory.inventory.items do
+                                task.spawn(function()
+                                    pcall(function()
+                                        switchItem(tool.tool, 0, true)
+                                    end)
+                                end)
                             end
                         end
-                    end)
-
-                    if not ok then
-                        warn("[Crasher Error]:", err)
-                        notif('Crasher', 'Error')
-                        ClientCrasher:Toggle(false)
-                        break
                     end
-
                     task.wait()
                 until not ClientCrasher.Enabled
             end
