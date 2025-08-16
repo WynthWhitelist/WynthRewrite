@@ -12263,3 +12263,560 @@ run(function()
 		Function = function() end
 	})
 end)
+
+run(function()
+	local FakeLag = {Enabled = false}
+	local FakeLagUsage = {Value = "Blatant"}
+	local FakeLagSpeed = {Enabled = false}
+	local FakeLagDelay1 = {Value = 2}
+	local FakeLagDelay2 = {Value = 7}
+	local FakeLagDelayLegit = {Value = 3}
+	local FakeLagSpeed1 = {Value = 22}
+	local FakeLagSpeed2 = {Value = 18}
+	local FakeLagSpeed3 = {Value = 20}
+	local FakeLagSpeed4 = {Value = 2.7}
+	local FakeLagSpeed5 = {Value = 1.5}
+	local function ChangeSpeeds() -- this won't work with speed but ok
+		entitylib.character.Humanoid.WalkSpeed = FakeLagSpeed1.Value
+		task.wait(FakeLagSpeed4.Value / 10)
+		entitylib.character.Humanoid.WalkSpeed = FakeLagSpeed2.Value
+		task.wait(FakeLagSpeed5.Value / 10)
+		entitylib.character.Humanoid.WalkSpeed = FakeLagSpeed3.Value
+	end
+	FakeLag = vape.Categories.Utility:CreateModule({
+		Name = "FakeLag",
+        Tooltip = "Makes people think you're laggy",
+		Function = function(callback)
+			if callback then
+				task.spawn(function()
+					repeat task.wait()
+						if FakeLagUsage.Value == "Blatant" then
+							entitylib.character.HumanoidRootPart.Anchored = true
+							task.wait(FakeLagDelay1.Value / 10)
+							entitylib.character.HumanoidRootPart.Anchored = false
+							ChangeSpeeds()
+							task.wait(FakeLagDelay2.Value/10)
+						elseif FakeLagUsage.Value == "Legit" then
+							entitylib.character.HumanoidRootPart.Anchored = true
+							task.wait(FakeLagDelay1.Value / 10 + FakeLagDelayLegit.Value)
+							entitylib.character.HumanoidRootPart.Anchored = false
+							ChangeSpeeds()
+							task.wait(FakeLagDelay2.Value / 10 + FakeLagDelayLegit.Value)
+						end
+					until not FakeLag.Enabled
+				end)
+			else
+				if entitylib.character.HumanoidRootPart.Anchored then
+					entitylib.character.HumanoidRootPart.Anchored = false
+				end
+			end
+		end,
+		ExtraText = function()
+			return FakeLagUsage.Value
+		end
+	})
+FakeLagUsage = FakeLag:CreateDropdown({
+    Name = "Mode",
+    List = {
+        "Blatant",
+        "Legit"
+    },
+    Tooltip = "FakeLag Mode",
+    Function = function() end
+})
+
+FakeLagSpeed = FakeLag:CreateToggle({
+    Name = "Speed",
+    Default = false,
+    Tooltip = "Changes speed",
+    Function = function() end
+})
+
+FakeLagDelay1 = FakeLag:CreateSlider({
+    Name = "Anchored Delay",
+    Min = 0,
+    Max = 20,
+    Tooltip = "Anchored Delay Value",
+    Function = function() end,
+    Default = 2
+})
+
+FakeLagDelay2 = FakeLag:CreateSlider({
+    Name = "Unanchored Delay",
+    Min = 0,
+    Max = 20,
+    Tooltip = "Not Anchored Delay Value",
+    Function = function() end,
+    Default = 7
+})
+
+FakeLagDelayLegit = FakeLag:CreateSlider({
+    Name = "Legit",
+    Min = 1,
+    Max = 10,
+    Tooltip = "Legit Time",
+    Function = function() end,
+    Default = 3
+})
+
+FakeLagSpeed1 = FakeLag:CreateSlider({
+    Name = "Speed 1",
+    Min = 1,
+    Max = 22,
+    Tooltip = "Speed 1 Value",
+    Function = function() end,
+    Default = 22
+})
+
+FakeLagSpeed2 = FakeLag:CreateSlider({
+    Name = "Speed 2",
+    Min = 1,
+    Max = 20,
+    Tooltip = "Speed 2 Value",
+    Function = function() end,
+    Default = 18
+})
+
+FakeLagSpeed3 = FakeLag:CreateSlider({
+    Name = "Speed 3",
+    Min = 1,
+    Max = 20,
+    Tooltip = "Speed 3 Value",
+    Function = function() end,
+    Default = 20
+})
+
+FakeLagSpeed4 = FakeLag:CreateSlider({
+    Name = "Speed Delay 1",
+    Min = 1,
+    Max = 3,
+    Tooltip = "Speed Delay 1 Value",
+    Function = function() end,
+    Default = 2.7
+})
+
+FakeLagSpeed5 = FakeLag:CreateSlider({
+    Name = "Speed Delay 2",
+    Min = 1,
+    Max = 3,
+    Tooltip = "Speed Delay 2 Value",
+    Function = function() end,
+    Default = 1.5
+})
+end)
+
+run(function()
+    local MotionBlurConnection
+    local MotionBlurEffect
+
+    MotionBlur = vape.Categories.CloudWare:CreateModule({
+        Name = 'MotionBlur',
+        Function = function(callback)
+            local Lighting = game:GetService("Lighting")
+            local RunService = game:GetService("RunService")
+            local Players = game:GetService("Players")
+            local player = Players.LocalPlayer
+            local camera = workspace.CurrentCamera
+
+            if callback then
+                local blur = Instance.new("BlurEffect")
+                blur.Name = "MotionBlur"
+                blur.Size = 0
+                blur.Parent = Lighting
+                MotionBlurEffect = blur
+
+                local character = player.Character or player.CharacterAdded:Wait()
+                local root = character:WaitForChild("HumanoidRootPart")
+
+                local lastLook = camera.CFrame.LookVector
+                local lastPosition = root.Position
+                local currentBlur = 0
+
+                local function lerp(a, b, t)
+                    return a + (b - a) * t
+                end
+
+                MotionBlurConnection = RunService.RenderStepped:Connect(function()
+                    if not root or not root.Parent then return end
+                    local look = camera.CFrame.LookVector
+                    local pos = root.Position
+
+                    local rotDelta = math.acos(math.clamp(look:Dot(lastLook), -1, 1))
+                    local rotBlur = math.clamp(rotDelta * 120, 0, 15)
+                    lastLook = look
+
+                    local moveDelta = (pos - lastPosition).Magnitude
+                    local moveBlur = math.clamp(moveDelta * 2.2, 0, 15)
+                    lastPosition = pos
+
+                    local targetBlur = math.clamp(rotBlur + moveBlur, 0, 25)
+                    currentBlur = lerp(currentBlur, targetBlur, 0.2)
+                    blur.Size = currentBlur
+                end)
+            else
+                if MotionBlurEffect then
+                    MotionBlurEffect:Destroy()
+                    MotionBlurEffect = nil
+                end
+                if MotionBlurConnection then
+                    MotionBlurConnection:Disconnect()
+                    MotionBlurConnection = nil
+                end
+            end
+        end,
+        Default = false,
+        Tooltip = "Self Explanatory"
+    })
+end)
+					
+--Yes this is from Velocity BUT i got permission :D
+run(function()
+	local HotbarVisuals: table = {}
+	local HotbarRounding: table  = {}
+	local HotbarHighlight: table  = {}
+	local HotbarColorToggle: table  = {}
+	local HotbarHideSlotIcons: table  = {}
+	local HotbarSlotNumberColorToggle: table  = {}
+	local HotbarSpacing: table  = {Value = 0}
+	local HotbarInvisibility: table  = {Value = 4}
+	local HotbarRoundRadius: table  = {Value = 8}
+	local HotbarColor: table  = {}
+	local HotbarHighlightColor: table  = {}
+	local HotbarSlotNumberColor: table  = {}
+	local hotbarcoloricons: table  = {}
+	local hotbarsloticons: table  = {}
+	local hotbarobjects: table  = {}
+	local hotbarslotgradients: table  = {}
+	local inventoryiconobj: any = nil
+
+	local function hotbarFunction(): (any, any)
+		local icons: any = ({pcall(function() return lplr.PlayerGui.hotbar["1"].ItemsHotbar end)})[2];
+		if not (icons and typeof(icons) == "Instance") then return end;
+
+		inventoryiconobj = icons;
+		pcall(function()
+			local layout: UIListLayout? = icons:FindFirstChildOfClass("UIListLayout");
+			if layout then layout.Padding = UDim.new(0, HotbarSpacing.Value); end
+		end);
+
+		for _, v: Instance in pairs(icons:GetChildren()) do
+			local sloticon: TextLabel? = ({pcall(function() return v:FindFirstChildWhichIsA("ImageButton"):FindFirstChildWhichIsA("TextLabel") end)})[2];
+			if typeof(sloticon) ~= "Instance" then continue end;
+
+			local parent: GuiObject = sloticon.Parent;
+			table.insert(hotbarcoloricons, parent);
+			sloticon.Parent.Transparency = 0.1 * HotbarInvisibility.Value;
+
+			if HotbarColorToggle.Enabled and not HotbarVisualsGradient.Enabled then
+				parent.BackgroundColor3 = Color3.fromHSV(HotbarColor.Hue, HotbarColor.Sat, HotbarColor.Value);
+			elseif HotbarVisualsGradient.Enabled and not parent:FindFirstChildWhichIsA("UIGradient") then
+				parent.BackgroundColor3 = Color3.fromRGB(255, 255, 255);
+				local g: UIGradient = Instance.new("UIGradient");
+				g.Color = ColorSequence.new({
+					ColorSequenceKeypoint.new(0, Color3.fromHSV(HotbarVisualsGradientColor.Hue, HotbarVisualsGradientColor.Sat, HotbarVisualsGradientColor.Value)),
+					ColorSequenceKeypoint.new(1, Color3.fromHSV(HotbarVisualsGradientColor2.Hue, HotbarVisualsGradientColor2.Sat, HotbarVisualsGradientColor2.Value))
+				});
+				g.Parent = parent;
+				table.insert(hotbarslotgradients, g);
+			end;
+
+			if HotbarRounding.Enabled then
+				local r: UICorner = Instance.new("UICorner"); r.CornerRadius = UDim.new(0, HotbarRoundRadius.Value);
+				r.Parent = parent; table.insert(hotbarobjects, r);
+			end;
+
+			if HotbarHighlight.Enabled then
+				local hl: UIStroke = Instance.new("UIStroke");
+				hl.Color = Color3.fromHSV(HotbarHighlightColor.Hue, HotbarHighlightColor.Sat, HotbarHighlightColor.Value);
+				hl.Thickness = 1.3; hl.Parent = parent;
+				table.insert(hotbarobjects, hl);
+			end;
+
+			if HotbarHideSlotIcons.Enabled then sloticon.Visible = false; end;
+			table.insert(hotbarsloticons, sloticon);
+		end;
+	end;
+
+	HotbarVisuals = vape.Categories.Render:CreateModule({
+		["Name"] = 'HotbarVisuals',
+		["Tooltip"] = 'Add customization to your hotbar.',
+		["Function"] = function(callback: boolean): void
+			if callback then 
+				task.spawn(function()
+					table.insert(HotbarVisuals.Connections, lplr.PlayerGui.DescendantAdded:Connect(function(v)
+						if v.Name == "hotbar" then hotbarFunction(); end
+					end));
+					hotbarFunction();
+				end);
+				table.insert(HotbarVisuals.Connections, runService.RenderStepped:Connect(function()
+					for _, v in hotbarcoloricons do pcall(function() v.Transparency = 0.1 * HotbarInvisibility["Value"]; end); end
+				end));
+			else
+				for _: any, v: any in hotbarsloticons do pcall(function() v.Visible = true; end); end
+				for _: any, v: any in hotbarcoloricons do pcall(function() v.BackgroundColor3 = Color3.fromRGB(29, 36, 46); end); end
+				for _: any, v: any in hotbarobjects do pcall(function() v:Destroy(); end); end
+				for _: any, v: any in hotbarslotgradients do pcall(function() v:Destroy(); end); end
+				table.clear(hotbarobjects); table.clear(hotbarsloticons); table.clear(hotbarcoloricons);
+			end;
+		end;
+	})
+	local function forceRefresh()
+		if HotbarVisuals["Enabled"] then HotbarVisuals:Toggle(); HotbarVisuals:Toggle(); end;
+	end;
+	HotbarColorToggle = HotbarVisuals:CreateToggle({
+		["Name"] = "Slot Color",
+		["Function"] = function(callback: boolean): void pcall(function() HotbarColor.Object.Visible = callback; end); forceRefresh(); end
+	});
+	HotbarVisualsGradient = HotbarVisuals:CreateToggle({
+		["Name"] = "Gradient Slot Color",
+		["Function"] = function(callback: boolean): void
+			pcall(function()
+				HotbarVisualsGradientColor.Object.Visible = callback;
+				HotbarVisualsGradientColor2.Object.Visible = callback;
+			end);
+			forceRefresh();
+		end;
+	});
+	HotbarVisualsGradientColor = HotbarVisuals:CreateColorSlider({
+		["Name"] = 'Gradient Color',
+		["Function"] = function(h, s, v)
+			for i: any, v: any in hotbarslotgradients do 
+				pcall(function() v.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHSV(HotbarVisualsGradientColor.Hue, HotbarVisualsGradientColor.Sat, HotbarVisualsGradientColor.Value)), ColorSequenceKeypoint.new(1, Color3.fromHSV(HotbarVisualsGradientColor2.Hue, HotbarVisualsGradientColor2.Sat, HotbarVisualsGradientColor2.Value))}) end)
+			end;
+		end;
+	})
+	HotbarVisualsGradientColor2 = HotbarVisuals:CreateColorSlider({
+		["Name"] = 'Gradient Color 2',
+		["Function"] = function(h, s, v)
+			for i: any,v: any in hotbarslotgradients do 
+				pcall(function() v.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHSV(HotbarVisualsGradientColor.Hue, HotbarVisualsGradientColor.Sat, HotbarVisualsGradientColor.Value)), ColorSequenceKeypoint.new(1, Color3.fromHSV(HotbarVisualsGradientColor2.Hue, HotbarVisualsGradientColor2.Sat, HotbarVisualsGradientColor2.Value))}) end)
+			end;
+		end;
+	})
+	HotbarColor = HotbarVisuals:CreateColorSlider({
+		["Name"] = 'Slot Color',
+		["Function"] = function(h, s, v)
+			for i: any,v: any in hotbarcoloricons do
+				if HotbarColorToggle["Enabled"] then
+					pcall(function() v.BackgroundColor3 = Color3.fromHSV(HotbarColor.Hue, HotbarColor.Sat, HotbarColor.Value) end) 
+				end;
+			end;
+		end;
+	})
+	HotbarRounding = HotbarVisuals:CreateToggle({
+		["Name"] = 'Rounding',
+		["Function"] = function(callback: boolean): void pcall(function() HotbarRoundRadius.Object.Visible = callback; end); forceRefresh(); end
+	})
+	HotbarRoundRadius = HotbarVisuals:CreateSlider({
+		["Name"] = 'Corner Radius',
+		["Min"] = 1,
+		["Max"] = 20,
+		["Function"] = function(callback: boolean): void
+			for i,v in hotbarobjects do 
+				pcall(function() v.CornerRadius = UDim.new(0, callback) end);
+			end;
+		end;
+	})
+	HotbarHighlight = HotbarVisuals:CreateToggle({
+		["Name"] = 'Outline Highlight',
+		["Function"] = function(callback: boolean): void pcall(function() HotbarHighlightColor.Object.Visible = callback; end); forceRefresh(); end
+	})
+	HotbarHighlightColor = HotbarVisuals:CreateColorSlider({
+		["Name"] = 'Highlight Color',
+		["Function"] = function(h, s, v)
+			for i,v in hotbarobjects do 
+				if v:IsA('UIStroke') and HotbarHighlight.Enabled then 
+					pcall(function() v.Color = Color3.fromHSV(HotbarHighlightColor.Hue, HotbarHighlightColor.Sat, HotbarHighlightColor.Value) end)
+				end;
+			end;
+		end;
+	})
+	HotbarHideSlotIcons = HotbarVisuals:CreateToggle({
+		["Name"] = "No Slot Numbers", ["Function"] = forceRefresh
+	});
+	HotbarInvisibility = HotbarVisuals:CreateSlider({
+		["Name"] = 'Invisibility',
+		["Min"] = 0,
+		["Max"] = 10,
+		["Default"] = 4,
+		["Function"] = function(value)
+			for i,v in hotbarcoloricons do 
+				pcall(function() v.Transparency = (0.1 * value) end); 
+			end;
+		end;
+	})
+	HotbarSpacing = HotbarVisuals:CreateSlider({
+		["Name"] = 'Spacing',
+		["Min"] = 0,
+		["Max"] = 5,
+		["Function"] = function(value)
+			if HotbarVisuals["Enabled"] then 
+				pcall(function() inventoryiconobj:FindFirstChildOfClass('UIListLayout').Padding = UDim.new(0, value) end);
+			end;
+		end;
+	})
+	HotbarColor.Object.Visible = false;
+	HotbarRoundRadius.Object.Visible = false;
+	HotbarHighlightColor.Object.Visible = false;
+end);
+
+run(function()
+	local GameWeather: table = {["Enabled"] = false}
+	local GameWeatherMode: table = {["Value"] = "Snow"}
+	local SnowflakesSpread: table = {["Value"] = 35}
+	local SnowflakesRate: table = {["Value"] = 28}
+	local SnowflakesHigh: table = {["Value"] = 100}
+	GameWeather = vape.Categories.Render:CreateModule({
+		["Name"] ='GameWeather',
+		["HoverText"] = 'Changes the weather.',
+		["Function"] = function(callback: boolean): void 
+			if callback then
+				task.spawn(function()
+					if game_weather_m["Value"] == 'Snow' then
+						-- vape gametheme code
+						local snowpart = Instance.new("Part")
+						snowpart.Size = Vector3.new(240,0.5,240)
+						snowpart.Name ="SnowParticle"
+						snowpart.Transparency = 1
+						snowpart.CanCollide = false
+						snowpart.Position = Vector3.new(0,120,286)
+						snowpart.Anchored = true
+						snowpart.Parent = workspace
+						local snow: ParticleEmitter = Instance.new("ParticleEmitter")
+						snow.RotSpeed = NumberRange.new(300)
+						snow.VelocitySpread = SnowflakesSpread["Value"]
+						snow.Rate = SnowflakesRate["Value"]
+						snow.Texture = "rbxassetid://8158344433"
+						snow.Rotation = NumberRange.new(110)
+						snow.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,0.16939899325371,0),NumberSequenceKeypoint.new(0.23365999758244,0.62841498851776,0.37158501148224),NumberSequenceKeypoint.new(0.56209099292755,0.38797798752785,0.2771390080452),NumberSequenceKeypoint.new(0.90577298402786,0.51912599802017,0),NumberSequenceKeypoint.new(1,1,0)})
+						snow.Lifetime = NumberRange.new(8,14)
+						snow.Speed = NumberRange.new(8,18)
+						snow.EmissionDirection = Enum.NormalId.Bottom
+						snow.SpreadAngle = Vector2.new(35,35)
+						snow.Size = NumberSequence.new({NumberSequenceKeypoint.new(0,0,0),NumberSequenceKeypoint.new(0.039760299026966,1.3114800453186,0.32786899805069),NumberSequenceKeypoint.new(0.7554469704628,0.98360699415207,0.44038599729538),NumberSequenceKeypoint.new(1,0,0)})
+						snow.Parent = snowpart
+						local windsnow = Instance.new("ParticleEmitter")
+						windsnow.Acceleration = Vector3.new(0,0,1)
+						windsnow.RotSpeed = NumberRange.new(100)
+						windsnow.VelocitySpread = SnowflakesSpread["Value"]
+						windsnow.Rate = SnowflakesRate["Value"]
+						windsnow.Texture = "rbxassetid://8158344433"
+						windsnow.EmissionDirection = Enum.NormalId.Bottom
+						windsnow.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,0.16939899325371,0),NumberSequenceKeypoint.new(0.23365999758244,0.62841498851776,0.37158501148224),NumberSequenceKeypoint.new(0.56209099292755,0.38797798752785,0.2771390080452),NumberSequenceKeypoint.new(0.90577298402786,0.51912599802017,0),NumberSequenceKeypoint.new(1,1,0)})
+						windsnow.Lifetime = NumberRange.new(8,14)
+						windsnow.Speed = NumberRange.new(8,18)
+						windsnow.Rotation = NumberRange.new(110)
+						windsnow.SpreadAngle = Vector2.new(35,35)
+						windsnow.Size = NumberSequence.new({NumberSequenceKeypoint.new(0,0,0),NumberSequenceKeypoint.new(0.039760299026966,1.3114800453186,0.32786899805069),NumberSequenceKeypoint.new(0.7554469704628,0.98360699415207,0.44038599729538),NumberSequenceKeypoint.new(1,0,0)})
+						windsnow.Parent = snowpart
+						repeat task.wait(0)
+							if entitylib.isAlive then 
+								snowpart.Position = entitylib.character.HumanoidRootPart.Position + Vec3(0, SnowflakesHigh.Value, 0)
+							end
+						until not vapeInjected
+					else
+						-- creds to AntiMonacoGang
+						repeat task.wait(0.03)
+							local Player = game:GetService('Players').LocalPlayer
+							local Camera = workspace.CurrentCamera
+							repeat wait() until Player.Character ~= nil
+							local Torso;
+							repeat
+								task.wait(0.03)
+								if Player.Character and Player.Character:FindFirstChild("UpperTorso") then
+							        	Torso = Player.Character.UpperTorso;
+									break;
+							    	end;
+							until Torso;
+							local RainSound = Instance.new("Sound", Camera)
+							RainSound.SoundId = "http://www.roblox.com/asset/?ID=236148388"
+							RainSound.Looped = true
+							RainSound:Play()
+							function Particle(cframe)
+								local Spread = Vector3.new(math.random(-100, 100), math.random(-100, 100), math.random(-100, 100))
+								local Part = Instance.new("Part", Camera)
+								local Smoke = Instance.new("Smoke", Part)
+								Part.CanCollide = false
+								Part.Transparency = 0.25
+								Part.Reflectance = 0.15
+								Smoke.RiseVelocity = -25
+								Smoke.Opacity = 0.25
+								Smoke.Size = 25
+								Part.BrickColor = BrickColor.new("Steel blue")
+								Part.FormFactor = Enum.FormFactor.Custom
+								Part.Size = Vector3.new(0.15, 2, 0.15)
+								Part.CFrame = CFrame.new(cframe.p + (cframe:vectorToWorldSpace(Vector3.new(0, 1, 0)).unit * 150) + Spread) * CFrame.Angles(0, math.atan2(cframe.p.X, cframe.p.Z) + math.pi, 0)
+								game:GetService("Debris"):AddItem(Part, 3)
+								Instance.new("BlockMesh", Part)
+								Part.Touched:Connect(function(Hit)
+									Part:Destroy()
+								end)
+							end
+							function Roof(cframe)
+								return workspace:FindPartOnRayWithIgnoreList(Ray.new(cframe.p, cframe.p * Vector3.new(0, 150, 0)), {Player.Character})
+							end
+							-- if Camera ~= nil and Torso ~= nil then
+								if Roof(Torso.CFrame) == nil then
+									for _ = 1, 5 do
+										if (Camera.CFrame.p - Torso.CFrame.p).Magnitude > 100 then
+											Particle(Camera.CFrame)
+											Particle(Torso.CFrame)
+										else
+											Particle(Torso.CFrame)
+										end
+									end
+									RainSound.Volume = 0.05
+								else
+									RainSound.Volume = 0.05
+									if Roof(Camera.CFrame) == nil then
+										for _ = 1, 5 do
+											Particle(Camera.CFrame)
+										end
+									end
+								end
+								RainSound:Destroy()
+							-- end
+						until (not GameWeather["Enabled"])
+					end
+				end)
+			else
+				for _, v in next, workspace:GetChildren() do
+					if v.Name == "SnowParticle" then
+						v:Remove()
+					end
+				end
+			end
+		end
+	})
+	game_weather_m = GameWeather:CreateDropdown({
+		["Name"] ='Mode',
+		["List"] = {
+			'Snow',
+			'Rain'
+		},
+		["Default"] ='Snow',
+		["HoverText"] = 'Mode to change the weather.',
+		["Function"] = function() end;
+	});
+	SnowflakesSpread = GameWeather:CreateSlider({
+		["Name"] ="Snow Spread",
+		["Min"] =1,
+		["Max"] =100,
+		["Function"] = function() end,
+		["Default"] =35
+	})
+	SnowflakesRate = GameWeather:CreateSlider({
+		["Name"] ="Snow Rate",
+		["Min"] =1,
+		["Max"] =100,
+		["Function"] = function() end,
+		["Default"] =28
+	})
+	SnowflakesHigh = GameWeather:CreateSlider({
+		["Name"] ="Snow High",
+		["Min"] =1,
+		["Max"] =200,
+		["Function"] = function() end,
+		["Default"] =100
+	})
+end)	
