@@ -12820,3 +12820,44 @@ run(function()
 		["Default"] =100
 	})
 end)	
+       
+run(function()
+    local AntiCrash
+
+    local function disableHandInvConnections(item)
+        if item then
+            for _, conn in ipairs(getconnections(item.Changed)) do
+                conn:Disable()
+            end
+        end
+    end
+
+    AntiCrash = vape.Categories.Utility:CreateModule({
+        Name = 'AntiCrash',
+        Function = function(call)
+            if call then
+                for _, v in getconnections(game:GetService("ReplicatedStorage")
+                    :WaitForChild("events-@easy-games/game-core:shared/game-core-networking@getEvents.Events")
+                    :WaitForChild("abilityUsed").OnClientEvent) do
+                    v:Disconnect()    
+                end
+
+                for _, entity in pairs(collectionService:GetTagged("inventory-entity")) do
+                    local item = entity:FindFirstChild("HandInvItem")
+                    disableHandInvConnections(item)
+                end
+
+                AntiCrash:Clean(collectionService:GetInstanceAddedSignal("inventory-entity"):Connect(function(playerModel: Model)
+                    local item = playerModel:FindFirstChild("HandInvItem")
+                    disableHandInvConnections(item)
+
+                    playerModel.ChildAdded:Connect(function(child)
+                        if child.Name == "HandInvItem" then
+                            disableHandInvConnections(child)
+                        end
+                    end)
+                end))
+            end
+        end
+    })
+end)																																																																																																																																
