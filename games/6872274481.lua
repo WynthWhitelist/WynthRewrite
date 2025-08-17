@@ -10402,104 +10402,110 @@ run(function()
 			end
 		end
 	})
-end)
-	
+end)	
+
 run(function()
-	local DamageIndicator
-	local FontOption
-	local Color
-	local Size
-	local Anchor
-	local Stroke
-	local suc, tab = pcall(function()
-		return debug.getupvalue(bedwars.DamageIndicator, 2)
-	end)
-	tab = suc and tab or {}
-	local oldvalues, oldfont = {}
-	
+	local DamageIndicator: table = {};
+	local colorTog: table = {}; 
+	local color: table = {["Hue"] = 0, ["Sat"] = 0, ["Value"] = 0};
+	local textTog: table = {}; 
+	local text: table = {}; 
+	local fontTog: table = {};
+	local font: table = {["Value"] = "GothamBlack"}; 
+	local mode: table = {["Value"] = "Rainbow"};
+	local mode2: table = {["Value"] = "Gradient"}; 
+	local mode1: table = {["Value"] = "Custom"};
+	local messages: table = {
+		"Pow!", "Pop!", "Hit!", "Smack!", "Bang!",
+		"Boom!", "Whoop!", "Damage!", "-9e9!", "Whack!",
+		"Crash!", "Slam!", "Zap!", "Snap!", "Thump!"
+	};
+	local colors: table = {
+		Color3.fromRGB(255,0,0),Color3.fromRGB(255,127,0),Color3.fromRGB(255,255,0),
+		Color3.fromRGB(0,255,0),Color3.fromRGB(0,0,255),Color3.fromRGB(75,0,130),Color3.fromRGB(148,0,211)
+	};
+	local i: number = 1; local mz: number = 5;
+	local rand: (t: table?) -> string = function(t)
+		if typeof(t) ~= "table" or #t == 0 then
+			return "";
+		end
+		local result = t[math.random(1, #t)]
+		return result;
+	end;
 	DamageIndicator = vape.Legit:CreateModule({
-		Name = 'Damage Indicator',
-		Function = function(callback)
-			if callback then
-				oldvalues = table.clone(tab)
-				oldfont = debug.getconstant(bedwars.DamageIndicator, 86)
-				debug.setconstant(bedwars.DamageIndicator, 86, Enum.Font[FontOption.Value])
-				debug.setconstant(bedwars.DamageIndicator, 119, Stroke.Enabled and 'Thickness' or 'Enabled')
-				tab.strokeThickness = Stroke.Enabled and 1 or false
-				tab.textSize = Size.Value
-				tab.blowUpSize = Size.Value
-				tab.blowUpDuration = 0
-				tab.baseColor = Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
-				tab.blowUpCompleteDuration = 0
-				tab.anchoredDuration = Anchor.Value
-			else
-				for i, v in oldvalues do
-					tab[i] = v
-				end
-				debug.setconstant(bedwars.DamageIndicator, 86, oldfont)
-				debug.setconstant(bedwars.DamageIndicator, 119, 'Thickness')
-			end
-		end,
-		Tooltip = 'Customize the damage indicator'
-	})
-	local fontitems = {'GothamBlack'}
-	for _, v in Enum.Font:GetEnumItems() do
-		if v.Name ~= 'GothamBlack' then
-			table.insert(fontitems, v.Name)
-		end
-	end
-	FontOption = DamageIndicator:CreateDropdown({
-		Name = 'Font',
-		List = fontitems,
-		Function = function(val)
-			if DamageIndicator.Enabled then
-				debug.setconstant(bedwars.DamageIndicator, 86, Enum.Font[val])
-			end
-		end
-	})
-	Color = DamageIndicator:CreateColorSlider({
-		Name = 'Color',
-		DefaultHue = 0,
-		Function = function(hue, sat, val)
-			if DamageIndicator.Enabled then
-				tab.baseColor = Color3.fromHSV(hue, sat, val)
-			end
-		end
-	})
-	Size = DamageIndicator:CreateSlider({
-		Name = 'Size',
-		Min = 1,
-		Max = 32,
-		Default = 32,
-		Function = function(val)
-			if DamageIndicator.Enabled then
-				tab.textSize = val
-				tab.blowUpSize = val
-			end
-		end
-	})
-	Anchor = DamageIndicator:CreateSlider({
-		Name = 'Anchor',
-		Min = 0,
-		Max = 1,
-		Decimal = 10,
-		Function = function(val)
-			if DamageIndicator.Enabled then
-				tab.anchoredDuration = val
-			end
-		end
-	})
-	Stroke = DamageIndicator:CreateToggle({
-		Name = 'Stroke',
-		Function = function(callback)
-			if DamageIndicator.Enabled then
-				debug.setconstant(bedwars.DamageIndicator, 119, callback and 'Thickness' or 'Enabled')
-				tab.strokeThickness = callback and 1 or false
-			end
-		end
-	})
-end)
-	
+		["Name"] = "DamageIndicator", ["HoverText"] = "Customizes the damage indicators.",
+		["Function"] = function(callback: boolean): void
+			if not callback then return; end;
+			task.spawn(function()
+				table.insert(DamageIndicator["Connections"], workspace.DescendantAdded:Connect(function(v)
+					if v.Name ~= "DamageIndicatorPart" then return end;
+					local lbl: TextLabel? = v:FindFirstChildWhichIsA("BillboardGui"):FindFirstChildWhichIsA("Frame"):FindFirstChildWhichIsA("TextLabel");
+					if not lbl then return; end;
+
+					if colorTog["Enabled"] then
+						if mode["Value"] == "Rainbow" then
+							if mode2["Value"] == "Gradient" then
+								lbl["TextColor3"] = Color3.fromHSV(tick() % mz / mz, 1, 1);
+							else
+								runService.Stepped:Connect(function()
+									i = (i % #colors) + 1;
+									lbl["TextColor3"] = colors[i];
+								end);
+							end;
+						elseif mode["Value"] == "Custom" then
+							lbl["TextColor3"] = Color3.fromHSV(color["Hue"], color["Sat"], color["Value"]);
+						else
+							lbl["TextColor3"] = Color3.fromRGB(127, 0, 255);
+						end;
+					end;
+
+					if textTog["Enabled"] then
+						lbl["Text"] = mode1["Value"] == "Custom" and rand(text["ListEnabled"])
+							or mode1["Value"] == "Multiple" and rand(messages)
+							or text["Value"] or "Velocity on top!";
+					end;
+					lbl["Font"] = fontTog["Enabled"] and Enum.Font[font["Value"]] or lbl["Font"];
+				end));
+			end);
+		end;
+	});
+	mode = DamageIndicator:CreateDropdown({
+		["Name"] = "Color Mode", ["List"] = {"Rainbow","Custom","Velocity"},
+		["HoverText"] = "Mode to color the damage indicator.", ["Value"] = "Rainbow", ["Function"] = function() end
+	});
+	mode2 = DamageIndicator:CreateDropdown({
+		["Name"] = "Rainbow Mode", ["List"] = {"Gradient","Paint"},
+		["HoverText"] = "Gradient or solid rainbow.", ["Value"] = "Gradient", ["Function"] = function() end
+	});
+	mode1 = DamageIndicator:CreateDropdown({
+		["Name"] = "Text Mode", ["List"] = {"Custom","Multiple","Velocity"},
+		["HoverText"] = "Text customization mode.", ["Value"] = "Custom", ["Function"] = function() end
+	});
+	local fonts: table = {"GothamBlack"};
+	for _, f: EnumItem in Enum.Font:GetEnumItems() do
+		if f.Name ~= "GothamBlack" then table.insert(fonts, f.Name); end;
+	end;
+	font = DamageIndicator:CreateDropdown({
+		["Name"] = "Font", ["HoverText"] = "Font of text indicator.",
+		["List"] = fonts, ["Function"] = function() end
+	});
+	colorTog = DamageIndicator:CreateToggle({
+		["Name"] = "Custom Color", ["HoverText"] = "Enable custom color.", ["Function"] = function() end
+	});
+	color = DamageIndicator:CreateColorSlider({
+		["Name"] = "Text Color", ["HoverText"] = "HSV selector.", ["Function"] = function() end
+	});
+	textTog = DamageIndicator:CreateToggle({
+		["Name"] = "Custom Text", ["HoverText"] = "Enable random messages.", ["Function"] = function() end
+	});
+	text = DamageIndicator:CreateTextList({
+		["Name"] = "Text", ["TempText"] = "Text of the indicator"
+	});
+	fontTog = DamageIndicator:CreateToggle({
+		["Name"] = "Custom Font", ["HoverText"] = "Enable custom font.", ["Function"] = function() end
+	});
+end);
+
 run(function()
 	local FOV
 	local Value
