@@ -12824,11 +12824,23 @@ end)
 run(function()
     local AntiCrash
 
-    local function disableHandInvConnections(item)
-        if item then
-            for _, conn in ipairs(getconnections(item.Changed)) do
-                conn:Disable()
+    local function safeDisconnect(connections)
+        for _, conn in ipairs(connections) do
+            if conn and (conn.Disconnect or conn.Disable) then
+                pcall(function()
+                    if conn.Disconnect then
+                        conn:Disconnect()
+                    elseif conn.Disable then
+                        conn:Disable()
+                    end
+                end)
             end
+        end
+    end
+
+    local function disableHandInvConnections(item)
+        if item and item.Changed then
+            safeDisconnect(getconnections(item.Changed))
         end
     end
 
@@ -12836,15 +12848,16 @@ run(function()
         Name = 'AntiCrash',
         Function = function(call)
             if call then
-                for _, v in getconnections(game:GetService("ReplicatedStorage")
-                    :WaitForChild("events-@easy-games/game-core:shared/game-core-networking@getEvents.Events")
-                    :WaitForChild("abilityUsed").OnClientEvent) do
-                    v:Disconnect()    
+                local eventsFolder = game:GetService("ReplicatedStorage"):FindFirstChild("events-@easy-games/game-core:shared/game-core-networking@getEvents.Events")
+                if eventsFolder then
+                    local abilityUsed = eventsFolder:FindFirstChild("abilityUsed")
+                    if abilityUsed and abilityUsed.OnClientEvent then
+                        safeDisconnect(getconnections(abilityUsed.OnClientEvent))
+                    end
                 end
 
                 for _, entity in pairs(collectionService:GetTagged("inventory-entity")) do
-                    local item = entity:FindFirstChild("HandInvItem")
-                    disableHandInvConnections(item)
+                    disableHandInvConnections(entity:FindFirstChild("HandInvItem"))
                 end
 
                 AntiCrash:Clean(collectionService:GetInstanceAddedSignal("inventory-entity"):Connect(function(playerModel: Model)
@@ -12860,9 +12873,8 @@ run(function()
             end
         end
     })
-end)																																																																																																																																
+end)
 
-																																				
 local FlyLandTick = tick()
 local InfiniteFly = {}
 local performanceStats = game:GetService('Stats'):FindFirstChild('PerformanceStats')
